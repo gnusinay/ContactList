@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">Contact List</string>
+    <string name="work_start_dialog_title">Load your contact list?</string>
+    <string name="work_start_dialog_message">The app will load your contact list in order that you can will send email letters to your contacts</string>
+    <string name="work_start_dialog_button_ok">Ok</string>
+    <string name="work_start_dialog_button_no">Cancel</string>
+    <string name="no_contacts_text">No loaded contacts</string>
+    <string name="promt_email_spinner">Emails</string>
+    <string name="default_email_subject">New Contacts App</string>
+    <string name="default_email_body">Sent from new Contacts App</string>
+</resources>
