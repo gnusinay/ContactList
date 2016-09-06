@@ -71,20 +71,14 @@ public class ContactAdapter extends BaseAdapter {
         TextView name = (TextView) view.findViewById(R.id.name);
         name.setText(contact.getName());
 
-        Spinner emails = (Spinner) view.findViewById(R.id.emails);
-
-
-
         if (contact.getEmails() != null) {
-            ArrayAdapter<String> adapter = new ArrayAdapter<String>(getContext(), android.R.layout.simple_spinner_item, contact.getEmails());
-            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-
-            emails.setAdapter(adapter);
-            //emails.setSelection(-1, true);
-            emails.setVisibility(View.VISIBLE);
+            view.findViewById(R.id.emailLabel).setVisibility(View.VISIBLE);
+            TextView emailText = (TextView) view.findViewById(R.id.emailText);
+            emailText.setVisibility(View.VISIBLE);
+            emailText.setText(contact.getEmails().get(0));
         } else {
-            emails.setAdapter(null);
-            emails.setVisibility(View.INVISIBLE);
+            view.findViewById(R.id.emailLabel).setVisibility(View.INVISIBLE);
+            view.findViewById(R.id.emailText).setVisibility(View.INVISIBLE);
         }
 
 

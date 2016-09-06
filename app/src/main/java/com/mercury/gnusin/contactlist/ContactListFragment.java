@@ -1,6 +1,7 @@
 package com.mercury.gnusin.contactlist;
 
 import android.content.ContentUris;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.res.AssetFileDescriptor;
 import android.database.Cursor;
@@ -12,11 +13,18 @@ import android.support.v4.app.ListFragment;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
+import android.support.v7.app.AlertDialog;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.ListAdapter;
+import android.widget.ListView;
+import android.widget.SimpleAdapter;
 import android.widget.Spinner;
+import android.widget.Toast;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -143,7 +151,42 @@ public class ContactListFragment extends ListFragment implements LoaderManager.L
     }
 
     @Override
-    public void setEmptyText(CharSequence text) {
-        super.setEmptyText(getString(R.string.no_contacts_text));
+    public void onListItemClick(ListView l, View v, int position, long id) {
+        //super.onListItemClick(l, v, position, id);
+        Contact contact = (Contact) l.getAdapter().getItem(position);
+        if (contact.getEmails() != null) {
+            if (contact.getEmails().size() > 1) {
+                AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+                builder.setTitle(getString(R.string.choose_email_dialog_title));
+                builder.setAdapter(new ArrayAdapter<>(getActivity(), android.R.layout.select_dialog_item, contact.getEmails().toArray()), null);
+                builder.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                    @Override
+                    public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                        createEmailForm((String) parent.getItemAtPosition(position));
+                    }
+
+                    @Override
+                    public void onNothingSelected(AdapterView<?> parent) {
+
+                    }
+                });
+                builder.create().show();
+            } else {
+                createEmailForm(contact.getEmails().get(0));
+            }
+        } else {
+            Toast toast = Toast.makeText(getActivity(), getString(R.string.no_email_message), Toast.LENGTH_LONG);
+            toast.setGravity(Gravity.BOTTOM|Gravity.CENTER_HORIZONTAL, 0, 0);
+            toast.show();
+        }
+    }
+
+    private void createEmailForm(String emailTo) {
+        Intent i = new Intent(Intent.ACTION_SEND);
+        i.setType("message/rfc822");
+        i.putExtra(Intent.EXTRA_EMAIL, emailTo);
+        i.putExtra(Intent.EXTRA_SUBJECT, getContext().getString(R.string.default_email_subject));
+        i.putExtra(Intent.EXTRA_TEXT, getContext().getString(R.string.default_email_body));
+        getActivity().startActivity(i);
     }
 }
