@@ -4,6 +4,7 @@ import android.content.ContentUris;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.res.AssetFileDescriptor;
+import android.database.ContentObserver;
 import android.database.Cursor;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
@@ -14,16 +15,14 @@ import android.support.v4.app.LoaderManager;
 import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
 import android.support.v7.app.AlertDialog;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListAdapter;
 import android.widget.ListView;
-import android.widget.SimpleAdapter;
-import android.widget.Spinner;
 import android.widget.Toast;
 
 import java.io.IOException;
@@ -40,21 +39,51 @@ import java.util.List;
  */
 public class ContactListFragment extends ListFragment implements LoaderManager.LoaderCallbacks<Cursor> {
 
+    public static final String TAG = "ContactListFragment";
+
+    private static final int LOADER_ID = 0;
     private ContactAdapter contactAdapter;
+    private Loader contactLoader;
+
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        contactAdapter = new ContactAdapter(this.getContext());
+        if (contactAdapter == null) {
+            Log.d("AGn", "onCreate - contactAdapter == null");
+            contactAdapter = new ContactAdapter(this.getContext());
+            setListAdapter(contactAdapter);
+            contactLoader = getLoaderManager().initLoader(LOADER_ID, null, this);
 
-        setListAdapter(contactAdapter);
+            getActivity().getContentResolver().registerContentObserver(ContactsContract.Data.CONTENT_URI, true, new ContentObserver(null) {
+                @Override
+                public boolean deliverSelfNotifications() {
+                    return super.deliverSelfNotifications();
+                }
 
-        getLoaderManager().initLoader(0, null, this);
+                @Override
+                public void onChange(boolean selfChange) {
+                    onChange(selfChange, null);
+                }
+
+                @Override
+                public void onChange(boolean selfChange, Uri uri) {
+                    contactLoader.startLoading();
+                }
+            });
+
+        } else {
+            Log.d("AGn", "onCreate - contactAdapter != null");
+        }
+        setRetainInstance(true);
+
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        Log.d("AGn", "onCreateView");
+        Log.d("AGn", "has loader - " + String.valueOf(getLoaderManager().getLoader(LOADER_ID) != null));
         return inflater.inflate(R.layout.v_contact_list, null);
     }
 
@@ -87,6 +116,7 @@ public class ContactListFragment extends ListFragment implements LoaderManager.L
 
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+        Log.d("AGn", "onLoadFinished");
         HashMap<Integer, Contact> contactMap = new HashMap<>();
 
         while (data.moveToNext()) {
@@ -135,7 +165,6 @@ public class ContactListFragment extends ListFragment implements LoaderManager.L
         });
 
         contactAdapter.changeData(contactList);
-        contactAdapter.notifyDataSetChanged();
 
         getView().findViewById(R.id.loadIndicator).setVisibility(View.INVISIBLE);
         if (contactAdapter.getCount() > 0) {
@@ -158,16 +187,12 @@ public class ContactListFragment extends ListFragment implements LoaderManager.L
             if (contact.getEmails().size() > 1) {
                 AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
                 builder.setTitle(getString(R.string.choose_email_dialog_title));
-                builder.setAdapter(new ArrayAdapter<>(getActivity(), android.R.layout.select_dialog_item, contact.getEmails().toArray()), null);
-                builder.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                ListAdapter adapter = new ArrayAdapter<>(getActivity(), android.R.layout.select_dialog_item, contact.getEmails().toArray());
+                builder.setAdapter(adapter, new DialogInterface.OnClickListener() {
                     @Override
-                    public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                        createEmailForm((String) parent.getItemAtPosition(position));
-                    }
-
-                    @Override
-                    public void onNothingSelected(AdapterView<?> parent) {
-
+                    public void onClick(DialogInterface dialog, int which) {
+                        String email = (String) ((AlertDialog) dialog).getListView().getSelectedItem();
+                        createEmailForm(email);
                     }
                 });
                 builder.create().show();
@@ -179,6 +204,13 @@ public class ContactListFragment extends ListFragment implements LoaderManager.L
             toast.setGravity(Gravity.BOTTOM|Gravity.CENTER_HORIZONTAL, 0, 0);
             toast.show();
         }
+    }
+
+    @Override
+    public void onDestroy() {
+        Log.d("AGn", "onDestroy");
+        getLoaderManager().destroyLoader(LOADER_ID);
+        super.onDestroy();
     }
 
     private void createEmailForm(String emailTo) {
